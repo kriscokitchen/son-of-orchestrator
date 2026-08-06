@@ -12,7 +12,7 @@
 ## Установка
 
 ```
-npx skills add vladsamatov2006-art/son-of-orchestrator
+npx skills add kriscokitchen/son-of-orchestrator
 ```
 
 Или вручную:
