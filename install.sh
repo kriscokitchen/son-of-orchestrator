@@ -4,7 +4,9 @@
 #   curl -fsSL https://raw.githubusercontent.com/kriscokitchen/son-of-orchestrator/main/install.sh | sh
 #
 # По умолчанию ставит для всех проектов, в ~/.claude/skills/.
-# Флаг --project ставит только в текущий проект, в ./.claude/skills/.
+#   --project      только в текущий проект, в ./.claude/skills/
+#   --dir ПУТЬ     в произвольный каталог навыков (для агентов, чей каталог
+#                  отличается от .claude/skills)
 # Переменная REF выбирает ветку или тег (по умолчанию main).
 
 set -eu
@@ -13,23 +15,37 @@ REPO="kriscokitchen/son-of-orchestrator"
 NAME="son-of-orchestrator"
 REF="${REF:-main}"
 SCOPE="user"
+DIR=""
 
-for arg in "$@"; do
-  case "$arg" in
+while [ $# -gt 0 ]; do
+  case "$1" in
     --project) SCOPE="project" ;;
     --user) SCOPE="user" ;;
+    --dir)
+      shift
+      [ $# -gt 0 ] || { echo "--dir требует путь. Смотри --help." >&2; exit 2; }
+      DIR="$1" ;;
+    --dir=*) DIR="${1#--dir=}" ;;
     -h|--help)
       echo "Установка навыка $NAME"
       echo
-      echo "  sh install.sh            в ~/.claude/skills (для всех проектов)"
-      echo "  sh install.sh --project  в ./.claude/skills (только этот проект)"
-      echo "  REF=ветка sh install.sh  поставить из другой ветки"
+      echo "  sh install.sh                 в ~/.claude/skills (для всех проектов)"
+      echo "  sh install.sh --project       в ./.claude/skills (только этот проект)"
+      echo "  sh install.sh --dir ПУТЬ      в произвольный каталог навыков"
+      echo "  REF=ветка sh install.sh       поставить из другой ветки"
+      echo
+      echo "Каталог навыков зависит от агента. Для Claude Code это"
+      echo ".claude/skills — он и берётся по умолчанию. Если твой агент"
+      echo "читает навыки из другого места, укажи его через --dir."
       exit 0 ;;
-    *) echo "Неизвестный аргумент: $arg. Смотри --help." >&2; exit 2 ;;
+    *) echo "Неизвестный аргумент: $1. Смотри --help." >&2; exit 2 ;;
   esac
+  shift
 done
 
-if [ "$SCOPE" = "project" ]; then
+if [ -n "$DIR" ]; then
+  DEST="$DIR/$NAME"
+elif [ "$SCOPE" = "project" ]; then
   DEST="$PWD/.claude/skills/$NAME"
 else
   DEST="$HOME/.claude/skills/$NAME"
