@@ -1,1 +1,6 @@
 .DS_Store
+
+# Референсы — чужие работы, держим локально
+ref/*
+!ref/README.md
+!ref/links.md
