@@ -17,7 +17,7 @@
      а на этом кегле норма не необязательна. */
   --ink:#141316; --ink-2:#5B5A61; --ink-3:#706F79;
   --line:hsl(30 8% 82%); --line-2:hsl(30 8% 88%);
-  --graphite:#33323A;
+  --graphite:#33323A; --silver:#A3A2AD;
   --crimson:#C8102E; --amber:#F5821E; --amber-ink:#9A5106;
   /* Тень тёплая и графитовая, не чёрная: чистый rgba(0,0,0,.1) на бумаге
      выглядит грязным пятном, а не отброшенным светом. */
@@ -133,9 +133,11 @@ h1{font-size:clamp(21px,2.5vw,29px); line-height:1.12; letter-spacing:-.024em;
 .arc.zero{opacity:0}
 .arc-done{stroke:url(#g-done); stroke-width:12}
 .arc-hit{stroke:url(#g-hit); stroke-width:10}
-/* Разрыв живёт ВНУТРИ дуги, а не сектором рядом с ней: багровым закрашен тот
-   отрезок кольца, который выполнение прошло, а попадание — нет. Читается как
-   «вот эта часть сделанного не отвечает брифу», а не как отдельная фигура. */
+/* Разрыв живёт ВНУТРИ дуги и продолжает ту метрику, которой не хватило: если
+   попадание отстало, багровый достраивает дугу попадания до отметки
+   выполнения. Начало отрезка совпадает с концом чёрной дуги на том же радиусе,
+   конец — с концом графитовой дуги по тому же радиусу наружу; кольца
+   сцепляются, и вопрос «где какая линия» не возникает. */
 .arc-gap{stroke:var(--crimson); stroke-dasharray:0 100;
   transition:stroke-dasharray .95s var(--e), stroke-dashoffset .95s var(--e)}
 .dial-c{position:absolute; inset:0; display:grid; align-content:center;
@@ -146,20 +148,24 @@ h1{font-size:clamp(21px,2.5vw,29px); line-height:1.12; letter-spacing:-.024em;
   text-transform:uppercase; color:var(--ink-3); margin-top:9px}
 
 .legend{grid-area:legend; margin:0; display:grid; gap:4px; align-content:center}
-.lg{display:grid; grid-template-columns:14px 1fr auto; gap:4px 12px; align-items:baseline;
+.lg{display:grid; grid-template-columns:26px 1fr auto; gap:4px 13px; align-items:baseline;
   padding:14px 0; border-top:1px solid var(--line-2)}
 .lg:first-child{border-top:0}
 .lg[hidden]{display:none}
-.sw{width:14px; height:14px; border-radius:99px; align-self:center;
-  border:3.5px solid var(--graphite); background:transparent}
-.lg[data-k="hit"] .sw{border-color:var(--ink)}
-.lg[data-k="hit"][data-void="1"] .sw{border-color:var(--line); border-style:dotted}
-.lg[data-k="gap"] .sw{border:0; background:hsl(350 85% 42% / .16);
-  box-shadow:inset 0 0 0 1.25px var(--crimson)}
-.lg[data-k="checks"] .sw{border-color:var(--line)}
+/* Метка строки рисует само кольцо: видно, о внешней дуге речь или о
+   внутренней. Плоский кружок этого сказать не мог. */
+.sw{width:26px; height:26px; flex:none; align-self:center; display:block}
+.sw circle{fill:none; stroke:var(--line-2); stroke-width:3}
+.sw.outer .o{stroke:var(--ink)}
+.sw.inner .i{stroke:var(--silver)}
+.sw.inner-void .i{stroke:var(--line); stroke-dasharray:1.1 2.4; stroke-linecap:round}
+.sw.gap-inner .i{stroke:var(--crimson)}
+.sw.gap-outer .o{stroke:var(--crimson)}
+.sw.bars rect{fill:var(--line)}
 .lg dt{font-size:14px; color:var(--ink-2)}
 .lg dd{margin:0; font:600 clamp(20px,2.2vw,27px)/1 "Golos Text",system-ui,sans-serif;
   letter-spacing:-.03em; text-align:right}
+.lg[data-k="done"] dd{color:var(--ink)}
 .lg[data-k="hit"] dd{color:var(--ink)}
 .lg[data-k="hit"][data-void="1"] dd{color:var(--ink-3); font-weight:400}
 .lg[data-k="gap"] dt,.lg[data-k="gap"] dd{color:var(--crimson)}
@@ -310,7 +316,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   <nav class="track" aria-label="Фазы прогона" style="--i:1"><ol id="phases"></ol></nav>
 
   <section class="pulse" aria-labelledby="p-h" style="--i:2">
-    <h2 class="cap" id="p-h">Выполнение и попадание</h2>
+    <h2 class="cap" id="p-h">Как идёт прогон</h2>
 
     <figure class="dial-fig">
     <div class="dial-wrap">
@@ -318,10 +324,10 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <title id="dial-t">Кольцо прогона</title>
         <defs>
           <linearGradient id="g-done" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#4E4D59"/><stop offset="1" stop-color="#2A2931"/>
+            <stop offset="0" stop-color="#2C2B34"/><stop offset="1" stop-color="#0D0D11"/>
           </linearGradient>
           <linearGradient id="g-hit" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#26252C"/><stop offset="1" stop-color="#0C0C10"/>
+            <stop offset="0" stop-color="#B6B5BF"/><stop offset="1" stop-color="#94939E"/>
           </linearGradient>
         </defs>
         <g transform="rotate(-90 100 100)">
@@ -345,22 +351,23 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     </figure>
 
     <dl class="legend">
+      <div class="lg" data-k="done">
+        <svg class="sw outer" viewBox="0 0 26 26" aria-hidden="true"><circle class="o" cx="13" cy="13" r="10.5"/><circle class="i" cx="13" cy="13" r="5"/></svg>
+        <dt>Выполнение</dt>
+        <dd class="num" id="v-done-l">—</dd>
+        <p id="done-basis"></p>
+      </div>
       <div class="lg" data-k="hit" data-void="1">
-        <span class="sw"></span>
+        <svg class="sw inner inner-void" viewBox="0 0 26 26" aria-hidden="true"><circle class="o" cx="13" cy="13" r="10.5"/><circle class="i" cx="13" cy="13" r="5"/></svg>
         <dt>Попадание в бриф</dt>
         <dd class="num" id="v-hit">—</dd>
         <p id="basis"></p>
       </div>
       <div class="lg" data-k="gap" id="lg-gap" hidden>
-        <span class="sw"></span>
+        <svg class="sw gap-inner" viewBox="0 0 26 26" aria-hidden="true"><circle class="o" cx="13" cy="13" r="10.5"/><circle class="i" cx="13" cy="13" r="5"/></svg>
         <dt>Разрыв</dt>
         <dd class="num" id="v-gap">—</dd>
         <p id="gapwhy"></p>
-      </div>
-      <div class="lg" data-k="checks">
-        <span class="sw"></span>
-        <dt>Приёмка</dt>
-        <dd class="num" id="v-checks">—</dd>
       </div>
     </dl>
 
@@ -455,17 +462,26 @@ function paint(payload, live){
   aHit.classList.toggle("zero", !hit);
   document.getElementById("trk-hit").classList.toggle("void", hit == null);
   count(document.getElementById("v-done"), done, "%");
+  count(document.getElementById("v-done-l"), done, "%");
   count(document.getElementById("v-hit"), hit, "%");
-  document.querySelector('.lg[data-k="hit"]').dataset.void = hit == null ? "1" : "0";
+  const lgHit = document.querySelector('.lg[data-k="hit"]');
+  lgHit.dataset.void = hit == null ? "1" : "0";
+  lgHit.querySelector(".sw").className.baseVal =
+    "sw inner" + (hit == null ? " inner-void" : "");
   const pb = document.getElementById("pb");
   pb.setAttribute("aria-valuenow", done);
   pb.setAttribute("aria-valuetext", `выполнено ${done}%`
     + (m.tickets_total ? `, ${m.tickets_by_state.done} из ${m.tickets_total} тикетов` : ""));
   document.getElementById("dial-t").textContent =
     `Выполнение ${done}%` + (hit == null ? ", попадание ещё не сверено" : `, попадание ${hit}%`);
-  document.getElementById("d-basis").textContent = m.tickets_total
-    ? `${m.tickets_by_state.done} из ${PLURAL(m.tickets_total,"тикета","тикетов","тикетов")}`
-    : "тикетов ещё нет";
+  document.getElementById("done-basis").textContent = m.tickets_total
+    ? `Закрыто ${m.tickets_by_state.done} из ${PLURAL(m.tickets_total,"тикета","тикетов","тикетов")}`
+    : "Тикетов ещё нет — они появятся после нарезки";
+  // Приёмка не лежит ни на одном кольце, поэтому её место не в легенде колец,
+  // а подписью под ними.
+  document.getElementById("d-basis").textContent = m.checks_total
+    ? `приёмка ${m.checks_pass} из ${PLURAL(m.checks_total,"пункта","пунктов","пунктов")}`
+    : "";
 
   // Основание попадания показывается всегда: голый процент умалчивает, сколько
   // требований ещё не сверено, и тем самым врёт о полноте.
@@ -478,17 +494,20 @@ function paint(payload, live){
         + (m.req_out ? `; ${m.req_out} сознательно не делаем` : "");
 
   // разрыв: сектор на кольце и строка в легенде
-  // Багровый отрезок ложится на ту дугу, которая длиннее: если тикетов закрыто
-  // больше, чем требований подтверждено, краснеет хвост выполнения; если
-  // наоборот — хвост попадания.
+  // Багровый достраивает ОТСТАВШУЮ дугу до отметки ушедшей вперёд и лежит на
+  // её собственном радиусе. Отстало попадание — краснеет внутреннее кольцо от
+  // конца чёрной дуги; отстало выполнение — внешнее. Так начало отрезка всегда
+  // совпадает с концом своей дуги, а конец — с концом соседней.
   const aGap = document.getElementById("a-gap"), lgGap = document.getElementById("lg-gap");
   if (hit != null && hit !== done) {
-    const lo = Math.min(done, hit), hi = Math.max(done, hit), outer = done > hit;
-    aGap.setAttribute("r", outer ? 84 : 64);
-    aGap.style.strokeWidth = outer ? 12 : 10;
+    const lo = Math.min(done, hit), hi = Math.max(done, hit), onInner = done > hit;
+    aGap.setAttribute("r", onInner ? 64 : 84);
+    aGap.style.strokeWidth = onInner ? 10 : 12;
     aGap.style.strokeDasharray = (hi - lo) + " 100";
     aGap.style.strokeDashoffset = -lo;
     aGap.classList.remove("zero");
+    lgGap.querySelector(".sw").className.baseVal =
+      "sw " + (onInner ? "gap-inner" : "gap-outer");
     lgGap.hidden = false;
     count(document.getElementById("v-gap"), Math.abs(done - hit), " п.");
     document.getElementById("gapwhy").textContent = done > hit
@@ -498,9 +517,6 @@ function paint(payload, live){
     aGap.classList.add("zero");
     lgGap.hidden = true;
   }
-
-  document.getElementById("v-checks").textContent = m.checks_total
-    ? `${m.checks_pass} / ${m.checks_total}` : "—";
 
   const notes = [];
   if (m.tickets_total === 0) {
