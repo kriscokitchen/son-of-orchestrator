@@ -1,12 +1,22 @@
 {
   "project": "Сайт студии маникюра",
   "brief": "Нужен сайт-визитка для студии маникюра, с записью и галереей",
+  "iteration": 1,
+  "iterations": {
+    "1": {
+      "title": "сайт-визитка с записью и галереей"
+    }
+  },
   "phase": {
     "current": 5,
     "name": "Раздача и сборка",
     "started": "2026-08-22T20:10:00"
   },
   "updated": "2026-08-22T21:40:00",
+  "tools": {
+    "check": "npm run check",
+    "shots": "node ~/.claude/skills/son-of-orchestrator/scripts/shots.mjs dist/index.html page"
+  },
   "tickets": [
     {
       "id": "T01",
@@ -27,7 +37,8 @@
           "text": "три ссылки ведут без 404",
           "state": "pass"
         }
-      ]
+      ],
+      "iteration": 1
     },
     {
       "id": "T02",
@@ -54,7 +65,8 @@
           "text": "заголовок нарисован заданной гарнитурой",
           "state": "pass"
         }
-      ]
+      ],
+      "iteration": 1
     },
     {
       "id": "T03",
@@ -77,7 +89,8 @@
           "text": "пустая галерея показывает осмысленное состояние",
           "state": "pass"
         }
-      ]
+      ],
+      "iteration": 1
     },
     {
       "id": "T04",
@@ -104,7 +117,8 @@
           "text": "ошибка показывается текстом, а не только цветом",
           "state": "pass"
         }
-      ]
+      ],
+      "iteration": 1
     },
     {
       "id": "T05",
@@ -127,7 +141,8 @@
           "text": "без токена форма показывает ошибку, а не молчит",
           "state": "pending"
         }
-      ]
+      ],
+      "iteration": 1
     },
     {
       "id": "T06",
@@ -151,7 +166,8 @@
           "state": "pending"
         }
       ],
-      "note": "Админка требует авторизации через провайдера хостинга — нужен доступ, которого нет"
+      "note": "Админка требует авторизации через провайдера хостинга — нужен доступ, которого нет",
+      "iteration": 1
     },
     {
       "id": "T07",
@@ -169,7 +185,8 @@
           "text": "адрес, часы и телефон видны без прокрутки на телефоне",
           "state": "pending"
         }
-      ]
+      ],
+      "iteration": 1
     },
     {
       "id": "T08",
@@ -189,7 +206,8 @@
           "text": "сайт открывается по публичному адресу",
           "state": "pending"
         }
-      ]
+      ],
+      "iteration": 1
     }
   ],
   "requirements": [
@@ -202,7 +220,8 @@
         "T01",
         "T02"
       ],
-      "state": "confirmed"
+      "state": "confirmed",
+      "iteration": 1
     },
     {
       "id": "R2",
@@ -212,7 +231,8 @@
       "tickets": [
         "T03"
       ],
-      "state": "confirmed"
+      "state": "confirmed",
+      "iteration": 1
     },
     {
       "id": "R3",
@@ -224,7 +244,8 @@
         "T05"
       ],
       "state": "partial",
-      "note": "Форма работает, но заявка пока не уходит: нет токена бота"
+      "note": "Форма работает, но заявка пока не уходит: нет токена бота",
+      "iteration": 1
     },
     {
       "id": "R4",
@@ -234,7 +255,8 @@
       "tickets": [
         "T08"
       ],
-      "state": "pending"
+      "state": "pending",
+      "iteration": 1
     },
     {
       "id": "R5",
@@ -244,7 +266,8 @@
       "tickets": [
         "T05"
       ],
-      "state": "pending"
+      "state": "pending",
+      "iteration": 1
     },
     {
       "id": "R6",
@@ -255,7 +278,8 @@
         "T03"
       ],
       "state": "partial",
-      "note": "Фото подтягиваются, тексты стоят заглушками — заказчица не передала"
+      "note": "Фото подтягиваются, тексты стоят заглушками — заказчица не передала",
+      "iteration": 1
     },
     {
       "id": "R7",
@@ -265,7 +289,8 @@
       "tickets": [
         "T05"
       ],
-      "state": "pending"
+      "state": "pending",
+      "iteration": 1
     },
     {
       "id": "R8",
@@ -276,7 +301,8 @@
         "T06"
       ],
       "state": "missing",
-      "note": "Админка не заработала: нужен доступ к аккаунту хостинга"
+      "note": "Админка не заработала: нужен доступ к аккаунту хостинга",
+      "iteration": 1
     },
     {
       "id": "R9",
@@ -286,7 +312,8 @@
       "tickets": [
         "T04"
       ],
-      "state": "confirmed"
+      "state": "confirmed",
+      "iteration": 1
     },
     {
       "id": "R10",
@@ -294,7 +321,8 @@
       "source": "В7",
       "spec": "§7",
       "tickets": [],
-      "state": "out-of-scope"
+      "state": "out-of-scope",
+      "iteration": 1
     },
     {
       "id": "R11",
@@ -302,7 +330,8 @@
       "source": "В6",
       "spec": "§7",
       "tickets": [],
-      "state": "out-of-scope"
+      "state": "out-of-scope",
+      "iteration": 1
     }
   ]
 }
