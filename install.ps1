@@ -56,9 +56,34 @@ try {
         throw "В скачанном архиве нет skills\$Name\SKILL.md — установка отменена."
     }
 
-    # Существующую копию не затираем молча: отодвигаем с меткой времени.
+    # Прежнюю копию не затираем молча, но и в папке навыков не оставляем: агент
+    # читает каждую папку с SKILL.md как навык, и отодвинутая копия со старым
+    # описанием срабатывала бы вместо новой. Копии уходят в skill-backups\
+    # рядом с папкой навыков.
+    $Skills  = Split-Path $Dest -Parent
+    $Backups = Join-Path (Split-Path $Skills -Parent) 'skill-backups'
+
+    # Свободное имя: две установки в одну секунду дали бы одно и то же, и
+    # Move-Item вложил бы копию внутрь прежней, вместо того чтобы положить рядом.
+    function Get-FreePath([string]$Path) {
+        $p = $Path; $n = 2
+        while (Test-Path $p) { $p = "$Path-$n"; $n++ }
+        return $p
+    }
+
+    # Копии, которые прошлые версии установщика оставили прямо в папке навыков.
+    if (Test-Path $Skills) {
+        Get-ChildItem -Path $Skills -Directory -Filter "$Name.backup-*" | ForEach-Object {
+            if (-not (Test-Path $Backups)) { New-Item -ItemType Directory -Path $Backups -Force | Out-Null }
+            $To = Get-FreePath (Join-Path $Backups $_.Name)
+            Move-Item -Path $_.FullName -Destination $To
+            Write-Host "Старая копия убрана из папки навыков: $To"
+        }
+    }
+
     if (Test-Path $Dest) {
-        $Backup = "$Dest.backup-" + (Get-Date -Format 'yyyyMMdd-HHmmss')
+        if (-not (Test-Path $Backups)) { New-Item -ItemType Directory -Path $Backups -Force | Out-Null }
+        $Backup = Get-FreePath (Join-Path $Backups ("$Name.backup-" + (Get-Date -Format 'yyyyMMdd-HHmmss')))
         Move-Item -Path $Dest -Destination $Backup
         Write-Host "Прежняя версия отодвинута: $Backup"
     }

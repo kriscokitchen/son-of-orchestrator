@@ -71,9 +71,33 @@ SRC=$(find "$TMP" -maxdepth 3 -type d -path "*/skills/$NAME" | head -1)
   exit 1
 }
 
-# Существующую копию не затираем молча: отодвигаем с меткой времени.
+# Прежнюю копию не затираем молча, но и в папке навыков не оставляем: агент
+# читает каждую папку с SKILL.md как навык, и отодвинутая копия со старым
+# описанием срабатывала бы вместо новой. Копии уходят в skill-backups/ рядом с
+# папкой навыков.
+SKILLS=$(dirname "$DEST")
+BACKUPS="$(dirname "$SKILLS")/skill-backups"
+
+# Свободное имя: две установки в одну секунду дали бы одно и то же, и mv вложил
+# бы копию внутрь прежней, вместо того чтобы положить рядом.
+free() {
+  P="$1"; N=2
+  while [ -e "$P" ]; do P="$1-$N"; N=$((N + 1)); done
+  echo "$P"
+}
+
+# Копии, которые прошлые версии установщика оставили прямо в папке навыков.
+for OLD in "$SKILLS/$NAME".backup-*; do
+  [ -d "$OLD" ] || continue
+  mkdir -p "$BACKUPS"
+  TO=$(free "$BACKUPS/$(basename "$OLD")")
+  mv "$OLD" "$TO"
+  echo "Старая копия убрана из папки навыков: $TO"
+done
+
 if [ -e "$DEST" ]; then
-  BACKUP="$DEST.backup-$(date +%Y%m%d-%H%M%S)"
+  mkdir -p "$BACKUPS"
+  BACKUP=$(free "$BACKUPS/$NAME.backup-$(date +%Y%m%d-%H%M%S)")
   mv "$DEST" "$BACKUP"
   echo "Прежняя версия отодвинута: $BACKUP"
 fi
