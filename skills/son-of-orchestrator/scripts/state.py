@@ -282,12 +282,20 @@ def clash(a: dict, b: dict) -> list:
     return overlap(a.get("files"), b.get("files"))
 
 
+def asking(t: dict) -> bool:
+    """Тикет ждёт решения человека: вопрос записан командой wait и ещё не снят."""
+    return bool((t.get("ask") or {}).get("question")) and t.get("state") in (None, "todo")
+
+
 def ready(data: dict, it: int, deps: dict | None = None) -> dict:
     """Что можно запустить прямо сейчас и что держит остальное.
 
     Готов — не начат, все зависимости (и из прошлых итераций) закрыты. Из
     готовых набираются те, что не делят файлы ни друг с другом, ни с тикетами в
     работе: это и есть набор для параллельных окон или фоновых агентов.
+
+    Тикет, который ждёт решения человека, не готов: фоновая раздача, идущая до
+    конца итерации, иначе отдала бы его новому агенту раньше ответа.
     """
     every = {t["id"]: t for t in data.get("tickets", [])}
     mine = [t for t in data.get("tickets", []) if it_of(t) == it]
@@ -300,9 +308,12 @@ def ready(data: dict, it: int, deps: dict | None = None) -> dict:
         extra = [d for d in raw if d != ALL and d not in deps.get(t["id"], [])]
         return list(deps.get(t["id"], [])) + extra
 
-    now, held = [], []
+    now, held, ask = [], [], []
     for t in mine:
         if t.get("state") not in (None, "todo"):
+            continue
+        if asking(t):
+            ask.append(t["id"])
             continue
         # Зависимость на несуществующий тикет не выполнится никогда: такой
         # тикет не готов, пока нарезку не поправят.
@@ -318,7 +329,7 @@ def ready(data: dict, it: int, deps: dict | None = None) -> dict:
         else:
             now.append(t)
     return {"now": [t["id"] for t in now], "held": held,
-            "doing": [t["id"] for t in doing]}
+            "doing": [t["id"] for t in doing], "asking": ask}
 
 
 # ── метрики ──────────────────────────────────────────────────────────────────

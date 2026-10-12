@@ -109,6 +109,11 @@ def render(root: pathlib.Path, data: dict, plan: dict) -> str:
         add(f"- {h['ticket']} готов по зависимостям, но ждёт {h['by']}: {why}.")
     if r["held"]:
         add("")
+    for tid in r.get("asking", []):
+        add(f"- {tid} ждёт решения человека: {every[tid]['ask']['question']} "
+            "Ответ — в основном окне.")
+    if r.get("asking"):
+        add("")
     waiting_ext = [e for e in plan["external"] if e["state"] != "done"]
     for e in waiting_ext:
         add(f"- {e['ticket']} ждёт {e['dep']} из итерации {e['iteration']}.")
@@ -176,7 +181,7 @@ def render(root: pathlib.Path, data: dict, plan: dict) -> str:
     return "\n".join(out) + "\n"
 
 
-def report(plan: dict, every: dict) -> None:
+def report(plan: dict, every: dict, paused: bool = False) -> None:
     it = plan["iteration"]
     print(f"итерация {it}: {sum(len(w) for w in plan['waves'])} тикетов, "
           f"{len(plan['waves'])} волн")
@@ -191,6 +196,11 @@ def report(plan: dict, every: dict) -> None:
     for h in r["held"]:
         why = "нет списка файлов" if h.get("unknown") else "общие файлы " + ", ".join(h["files"])
         print(f"  {h['ticket']} ждёт {h['by']}: {why}")
+    for tid in r.get("asking", []):
+        print(f"  {tid} ждёт решения человека: {every[tid]['ask']['question']}")
+    if paused:
+        print("  ФОНОВАЯ РАЗДАЧА ЖДЁТ ОТВЕТА на итог прошлой волны: следующую не запускать, "
+              "пока человек не ответил (status.py go)")
     for e in plan["external"]:
         if e["state"] != "done":
             print(f"  {e['ticket']} ждёт {e['dep']} из итерации {e['iteration']}")
@@ -220,7 +230,7 @@ def main() -> None:
     if not plan["waves"]:
         sys.exit(f"В итерации {plan['iteration']} нет тикетов.")
 
-    report(plan, every)
+    report(plan, every, bool((data.get("background") or {}).get("waiting")))
     if not args.dry:
         out = pathlib.Path(args.out) if args.out else state.orch(root) / "runbook.md"
         out.write_text(render(root, data, plan), encoding="utf-8")

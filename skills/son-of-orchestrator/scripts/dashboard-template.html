@@ -78,6 +78,29 @@ body::before{
 h1{font-size:clamp(21px,2.5vw,29px); line-height:1.12; letter-spacing:-.024em;
   margin:0 0 8px; font-weight:600; text-wrap:balance}
 .brief{color:var(--ink-2); margin:0; max-width:68ch; text-wrap:pretty}
+/* Исходный бриф под описанием проекта: дословная реплика человека нужна для
+   сверки, но в шапке она читается как случайная фраза, поэтому свёрнута. */
+.orig{margin-top:10px; max-width:68ch}
+.orig>p{margin:8px 0 0; color:var(--ink-3); font-size:14px; line-height:1.55; text-wrap:pretty}
+
+/* ── раскрываемые блоки: исходный бриф, описание тикета ──
+   Стрелка поворачивается, содержимое проявляется сдвигом и прозрачностью;
+   высота не анимируется — это перерисовка, а не композиция. */
+details.disc>summary{list-style:none; cursor:pointer; display:inline-flex; align-items:center;
+  gap:9px; font-size:12.5px; color:var(--ink-3); letter-spacing:.01em; border-radius:6px;
+  transition:color .2s var(--e-mic)}
+details.disc>summary::-webkit-details-marker{display:none}
+details.disc>summary::before{content:""; width:5px; height:5px; flex:none;
+  border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor;
+  transform:translateX(-1px) rotate(-45deg); transition:transform .28s var(--e)}
+details.disc[open]>summary::before{transform:translateY(-2px) rotate(45deg)}
+details.disc>summary:hover{color:var(--ink)}
+details.disc>summary:focus-visible{outline:2px solid var(--ink); outline-offset:3px}
+details.disc[open]>:not(summary){animation:unfold .32s var(--e) both}
+/* Живое обновление пересобирает список; раскрытый блок возвращается раскрытым
+   и не должен заново проявляться на каждом опросе. */
+details.disc.kept[open]>:not(summary){animation:none}
+@keyframes unfold{from{opacity:0; transform:translateY(-4px)}to{opacity:1; transform:none}}
 /* Знак вырезан из исходника: наружный чёрный снят по связной области от края,
    внутренняя чёрная эмаль между серебряными полосами оставлена — без неё
    рубины и бриллианты теряют контраст и знак расплывается на бумаге. */
@@ -254,6 +277,24 @@ ul.fail li{display:grid; grid-template-columns:auto 1fr; gap:9px; font-size:12.5
   line-height:1.45; color:var(--crimson)}
 ul.fail li::before{content:""; width:9px; height:1.5px; border-radius:2px;
   background:var(--crimson); transform:translateY(8px)}
+/* Описание тикета: что увидит человек, зачем, почему этим способом. */
+.about{margin-top:8px}
+.about dl{margin:9px 0 2px; padding:12px 14px; display:grid; gap:10px;
+  background:var(--sunk); border:1px solid var(--line-2); border-radius:11px; box-shadow:var(--well)}
+.about dt{font-size:10.5px; font-weight:600; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3)}
+.about dd{margin:3px 0 0; font-size:13.5px; line-height:1.5; color:var(--ink-2); text-wrap:pretty}
+/* Вопрос, который ждёт человека. Не багровый: это не провал, а пауза; тёмная
+   рамка выделяет его среди строк без нового цвета. */
+.ask{margin-top:10px; padding:12px 14px 13px; border-radius:11px; background:var(--card);
+  border:1px solid var(--graphite); box-shadow:var(--lift-1)}
+.ask>h4{margin:0; font-size:10.5px; font-weight:600; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--ink)}
+.ask>p{margin:6px 0 0; font-size:14px; line-height:1.5; color:var(--ink); text-wrap:pretty}
+.ask ol{margin:9px 0 0; padding:0; list-style:none; counter-reset:o; display:grid; gap:5px}
+.ask li{counter-increment:o; display:grid; grid-template-columns:18px 1fr; gap:6px;
+  font-size:13.5px; line-height:1.45; color:var(--ink-2)}
+.ask li::before{content:counter(o); font:500 12px/1.6 var(--mono); color:var(--ink-3)}
+.ask>small{display:block; margin-top:9px; font-size:12px; color:var(--ink-3)}
 .pips{display:flex; gap:4px; margin-top:10px}
 .pip{width:17px; height:4px; border-radius:99px; background:var(--line-2)}
 .pip[data-p="pass"]{background:var(--graphite)}
@@ -267,6 +308,8 @@ ul.fail li::before{content:""; width:9px; height:1.5px; border-radius:2px;
 .chip[data-s="failed"]::before,.chip[data-s="missing"]::before{background:var(--crimson)}
 .chip[data-s="partial"]::before{background:linear-gradient(90deg,var(--graphite) 50%,var(--crimson) 50%)}
 .chip[data-s="out-of-scope"]::before{background:transparent; border:1px solid var(--line); box-shadow:none}
+.chip[data-s="ask"]{color:var(--ink)}
+.chip[data-s="ask"]::before{background:transparent; box-shadow:inset 0 0 0 2px var(--ink)}
 .chip[data-s="done"],.chip[data-s="confirmed"]{color:var(--ink-2)}
 .chip[data-s="failed"],.chip[data-s="missing"]{color:var(--crimson)}
 li[data-s="out-of-scope"] .ttl>b,li[data-s="out-of-scope"] blockquote>b{color:var(--ink-3)}
@@ -324,6 +367,14 @@ footer{margin-top:clamp(22px,3vw,32px); padding-top:18px; border-top:1px solid v
 .ready p code{font:500 11.5px/1.4 var(--mono); color:var(--ink-2)}
 .ready p.err{color:var(--crimson)}
 
+/* ── итог последней волны фоновых агентов ── */
+.wave{padding:2px 2px 14px; margin:0 0 14px; border-bottom:1px solid var(--line-2)}
+.wave h3{margin:0 0 6px; font-size:11px; font-weight:600; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-3)}
+.wave h3 time{margin-left:8px; letter-spacing:.02em; text-transform:none; font-weight:500}
+.wave p{margin:0; font-size:14px; line-height:1.5; color:var(--ink); text-wrap:pretty}
+.wave small{display:block; margin-top:6px; font-size:12.5px; color:var(--ink-3); line-height:1.45}
+
 /* ── волны в списке тикетов ── */
 ul.rows>li.wave-h{display:flex; align-items:baseline; gap:10px; padding:18px 0 4px; margin:0;
   border-top:0; border-radius:0}
@@ -349,6 +400,11 @@ blockquote>small.by{color:var(--ink-2)}
   .run span{grid-column:1 / -1; grid-row:2}
   .pulse{grid-template-columns:1fr; grid-template-areas:"cap" "dial" "legend" "note"}
   .head{grid-template-columns:1fr auto}
+  /* Описание и вопрос тикета не помещаются между номером и состоянием:
+     состояние встаёт в строку номера, тикет получает всю ширину. */
+  #tickets>li:not(.wave-h){grid-template-columns:auto 1fr; row-gap:7px}
+  #tickets>li>.chip{grid-column:2; grid-row:1; justify-self:end}
+  #tickets>li>.ttl{grid-column:1 / -1; grid-row:2}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
 </style>
@@ -367,7 +423,11 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     <div class="head-t">
       <p class="eyebrow">son-of-orchestrator</p>
       <h1 id="project">—</h1>
-      <p class="brief" id="brief"></p>
+      <p class="brief" id="summary"></p>
+      <details class="disc orig" id="brief-d" hidden>
+        <summary>Исходный бриф</summary>
+        <p id="brief"></p>
+      </details>
     </div>
     <div class="plate">
       <img class="mark" alt="Son of Orchestrator" width="260" height="201"
@@ -443,6 +503,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     <section class="panel" aria-labelledby="t-h">
       <h2 id="t-h">Тикеты</h2>
       <p class="sub" id="t-sub"></p>
+      <div id="wave"></div>
       <div id="ready"></div>
       <ul class="rows" id="tickets"></ul>
     </section>
@@ -520,18 +581,75 @@ function ticketMeta(t, state, minutes){
        + (failed.length ? `<ul class="fail">${failed.map(c=>`<li>${esc(c.text)}</li>`).join("")}</ul>` : "");
 }
 
+// Раскрытые описания тикетов. Список пересобирается при каждом изменении
+// status.json, и без этого раскрытый блок захлопывался бы раз в пару секунд.
+const OPEN = new Set();
+document.addEventListener("toggle", e => {
+  const id = e.target.dataset && e.target.dataset.about;
+  if (id) e.target.open ? OPEN.add(id) : OPEN.delete(id);
+}, true);
+document.addEventListener("click", e => {
+  const s = e.target.closest && e.target.closest("details.disc>summary");
+  if (s) s.parentElement.classList.remove("kept");
+});
+
+// Что делать, зачем, почему так — у тикетов, нарезанных с 2.1. У старых
+// блока нет, и строка остаётся как была.
+const ABOUT = [["what","Что делать"],["why","Зачем"],["how","Почему так"]];
+function aboutBlock(t){
+  const a = t.about || {};
+  const rows = ABOUT.filter(([k]) => a[k]);
+  if (!rows.length) return "";
+  const open = OPEN.has(t.id);
+  return `<details class="disc about${open ? " kept" : ""}" data-about="${esc(t.id)}"${open ? " open" : ""}>
+    <summary>Описание</summary>
+    <dl>${rows.map(([k,label]) => `<div><dt>${label}</dt><dd>${esc(a[k])}</dd></div>`).join("")}</dl>
+  </details>`;
+}
+
+// Тикет ждёт решения: вопрос и варианты лежат в status.json, отвечает человек
+// в основном окне. Дашборд только показывает, о чём спросят.
+const asking = t => t.ask && t.ask.question && (t.state || "todo") === "todo";
+function askBlock(t){
+  if (!asking(t)) return "";
+  const opts = (t.ask.options || []).filter(Boolean);
+  return `<div class="ask"><h4>Ждёт решения</h4><p>${esc(t.ask.question)}</p>${
+    opts.length ? `<ol>${opts.map(o=>`<li>${esc(o)}</li>`).join("")}</ol>` : ""}
+    <small>Ответить в основном окне: там этот вопрос задан с вариантами и свободным ответом.</small></div>`;
+}
+
 function ticketRow(t, i, state, minutes, moved){
+  const ask = asking(t);
+  const chip = ask ? "ask" : t.state;
   return `
     <li data-s="${esc(t.state)}" style="--i:${i}"${moved ? ' class="flash"' : ""}>
       <span class="id">${esc(t.id)}</span>
       <div class="ttl">
         <b>${esc(t.title)}</b>
-        ${t.note ? `<small>${esc(t.note)}</small>` : ""}
+        ${t.note && !ask ? `<small>${esc(t.note)}</small>` : ""}
+        ${aboutBlock(t)}
+        ${askBlock(t)}
         ${ticketMeta(t, state, minutes)}
         <div class="pips">${(t.checks||[]).map(c=>`<span class="pip" data-p="${esc(c.state)}" title="${esc(c.text)}"></span>`).join("")}</div>
       </div>
-      <span class="chip" data-s="${esc(t.state)}">${TSTATE[t.state]||esc(t.state)}</span>
+      <span class="chip" data-s="${esc(chip)}">${ask ? "ждёт решения" : TSTATE[t.state]||esc(t.state)}</span>
     </li>`;
+}
+
+// Итог последней волны фоновых агентов и режим, в котором они идут.
+function waveNote(d){
+  const box = document.getElementById("wave");
+  const bg = d.background || {}, last = bg.last;
+  if (Number(SEL) !== CUR || !last || !last.text
+      || (last.iteration != null && Number(last.iteration) !== CUR)){ box.innerHTML = ""; return; }
+  const at = Date.parse(last.at);
+  const when = isNaN(at) ? "" : new Date(at).toLocaleString("ru-RU",
+    {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"});
+  const mode = bg.mode === "run"
+    ? "Волны идут сами до конца итерации. Остановка — на ошибке или вопросе."
+    : bg.mode === "ask" ? "Следующая волна — после вашего ответа в основном окне." : "";
+  box.innerHTML = `<div class="wave"><h3>Последняя волна${when ? `<time>${esc(when)}</time>` : ""}</h3>
+    <p>${esc(last.text)}</p>${mode ? `<small>${mode}</small>` : ""}</div>`;
 }
 
 // ── полоса итераций ─────────────────────────────────────────────────────────
@@ -603,7 +721,12 @@ function paint(payload, live){
   const view = snap.iterations[SEL], m = view.metrics, W = view.waves;
 
   document.getElementById("project").textContent = d.project || "Прогон";
-  document.getElementById("brief").textContent = d.brief || "";
+  // Описание проекта своими словами, если оно уже написано (Фаза 2); бриф
+  // дословный — свёрнутой строкой под ним. Нет описания — бриф, как раньше.
+  const sum = String(d.summary || "").trim(), brief = String(d.brief || "").trim();
+  document.getElementById("summary").textContent = sum || brief;
+  document.getElementById("brief-d").hidden = !(sum && brief);
+  document.getElementById("brief").textContent = sum ? brief : "";
   document.title = (d.project || "Прогон") + " — son-of-orchestrator";
   strip(snap);
 
@@ -708,6 +831,7 @@ function paint(payload, live){
     ? `${m.checks_pass} из ${PLURAL(m.checks_total,"пункта приёмки","пунктов приёмки","пунктов приёмки")} пройдено`
       + (m.minutes_median != null ? `, тикет в среднем ${dur(m.minutes_median)}` : "")
     : "";
+  waveNote(d);
   ready(W, all);
   let i = 0;
   const rows = [];

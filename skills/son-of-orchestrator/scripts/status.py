@@ -12,7 +12,15 @@ status.json ради одной записи: он растёт на тысяч�
     python3 status.py check T25 3 pass         пункт приёмки 3: pass | fail | pending
     python3 status.py done T25 --commit abc123 закрыть; откажет, если не все пункты pass
     python3 status.py fail T25 "причина"       упал, причина одной строкой
-    python3 status.py wait T25 "вопрос"        ждёт решения человека, обратно в todo
+    python3 status.py wait T25 "вопрос" --option "А" --option "Б"
+                                               ждёт решения человека, обратно в todo
+    python3 status.py answer T25 "ответ"       человек ответил: вопрос снят
+    python3 status.py about [T25 …]            блок «что делать, зачем, почему так»
+                                               из файла тикета; без номеров — вся итерация
+    python3 status.py summary "текст"          описание проекта своими словами
+    python3 status.py mode ask|run             фоном: спрашивать после волны | вести до конца
+    python3 status.py wave "итог" [--stop]     итог волны; в режиме ask — ждать ответа
+    python3 status.py go                       человек ответил на итог волны: можно дальше
     python3 status.py phase 4                  фаза текущей итерации
 
 Путь к проекту — текущая папка или --root.
@@ -23,6 +31,7 @@ import argparse
 import json
 import os
 import pathlib
+import re
 import sys
 import tempfile
 import time
@@ -85,12 +94,44 @@ def find(data: dict, tid: str) -> dict:
     sys.exit(f"Тикета {tid} нет в status.json.")
 
 
+ABOUT = (("what", "Что делать"), ("why", "Зачем"), ("how", "Почему так"))
+LABEL = re.compile(r"^\s*(?:[-*]\s+)?\**\s*(Что делать|Зачем|Почему так)\s*\**\s*:\s*\**\s*(.*)$", re.I)
+
+
+def read_about(path: pathlib.Path) -> dict:
+    """Три строки из начала файла тикета. Строка может переноситься: продолжение
+    идёт до пустой строки, заголовка или следующей метки."""
+    keys = {label.lower(): key for key, label in ABOUT}
+    out, cur = {}, None
+    for line in path.read_text(encoding="utf-8").splitlines():
+        m = LABEL.match(line)
+        if m and keys[m.group(1).lower()] not in out:
+            cur = keys[m.group(1).lower()]
+            out[cur] = m.group(2).strip()
+        elif cur and line.strip() and not line.lstrip().startswith("#"):
+            out[cur] += " " + line.strip()
+        else:
+            cur = None
+        if len(out) == 3 and cur is None:
+            break
+    return {k: v.strip(" *") for k, v in out.items() if v.strip(" *")}
+
+
 def show(root: pathlib.Path, data: dict, tid: str) -> None:
     t = find(data, tid)
     every = {x["id"]: x for x in data.get("tickets", [])}
     it = state.it_of(t)
     title = state.titles(root, data).get(it)
     print(f"{tid} — {t.get('title', '')}")
+    # Блок о тикете — первым: окно сначала понимает, что и зачем делает.
+    about = t.get("about") or {}
+    for key, label in ABOUT:
+        if about.get(key):
+            print(f"{label.lower()}: {about[key]}")
+    if state.asking(t):
+        print(f"ЖДЁТ РЕШЕНИЯ: {t['ask']['question']}")
+        for i, o in enumerate(t["ask"].get("options") or [], 1):
+            print(f"  {i}. {o}")
     print(f"итерация {it}" + (f": {title}" if title else "")
           + (f" (текущая {state.current(data)})" if it != state.current(data) else ""))
     print(f"состояние {t.get('state', 'todo')}, попыток {t.get('attempts', 0)}")
@@ -137,10 +178,19 @@ def main() -> None:
     d = sub.add_parser("done")
     d.add_argument("ticket")
     d.add_argument("--commit")
-    for name in ("fail", "wait"):
+    for name in ("fail", "wait", "answer"):
         p = sub.add_parser(name)
         p.add_argument("ticket")
         p.add_argument("reason")
+        if name == "wait":
+            p.add_argument("--option", action="append", default=[], help="вариант ответа")
+    sub.add_parser("about").add_argument("tickets", nargs="*")
+    sub.add_parser("summary").add_argument("text")
+    sub.add_parser("mode").add_argument("mode", choices=("ask", "run"))
+    w = sub.add_parser("wave")
+    w.add_argument("text")
+    w.add_argument("--stop", action="store_true", help="остановиться и ждать ответа и в режиме run")
+    sub.add_parser("go")
     ph = sub.add_parser("phase")
     ph.add_argument("n", type=int)
     args = ap.parse_args()
@@ -161,8 +211,50 @@ def main() -> None:
             write(path, data)
             print(f"фаза {args.n}: {state.PHASES[args.n]}")
             return
+        if args.cmd == "summary":
+            data["summary"] = args.text.strip()
+            write(path, data)
+            print("описание проекта записано")
+            return
+        if args.cmd in ("mode", "wave", "go"):
+            bg = data.setdefault("background", {})
+            if args.cmd == "mode":
+                bg["mode"] = args.mode
+                msg = "фоном: " + ("спрашивать после каждой волны" if args.mode == "ask"
+                                   else "вести до конца итерации")
+            elif args.cmd == "wave":
+                bg["last"] = {"iteration": state.current(data), "at": now(), "text": args.text.strip()}
+                # Флаг в файле, а не в памяти окна: контекст основного окна
+                # сжимается, а вопрос после волны должен пережить сжатие.
+                bg["waiting"] = args.stop or bg.get("mode", "ask") != "run"
+                msg = "итог волны записан" + (", ждём ответа человека" if bg["waiting"] else "")
+            else:
+                bg["waiting"] = False
+                msg = "можно запускать следующую волну"
+            write(path, data)
+            print(msg)
+            return
+        if args.cmd == "about":
+            cur = state.current(data)
+            ids = args.tickets or [t["id"] for t in data.get("tickets", []) if state.it_of(t) == cur]
+            missing = []
+            for tid in ids:
+                t = find(data, tid)
+                f = state.ticket_file(root, tid)
+                about = read_about(f) if f else {}
+                if about:
+                    t["about"] = about
+                if len(about) < 3:
+                    missing.append(tid + ("" if f else " (нет файла)"))
+            write(path, data)
+            print(f"блок о тикете записан: {len(ids) - len(missing)} из {len(ids)}")
+            if missing:
+                print("без полного блока «Что делать / Зачем / Почему так»: " + ", ".join(missing))
+            return
 
         t = find(data, args.ticket)
+        if args.cmd in ("start", "done", "fail"):
+            t.pop("ask", None)  # вопрос снят: тикет пошёл дальше
         if args.cmd == "start":
             t["state"] = "doing"
             t["started"] = now()
@@ -190,10 +282,16 @@ def main() -> None:
             t["finished"] = now()
             t["note"] = args.reason
             msg = f"{t['id']} упал: {args.reason}"
+        elif args.cmd == "answer":
+            t.pop("ask", None)
+            t["note"] = "решение: " + args.reason
+            msg = f"{t['id']}: ответ записан, тикет снова можно запускать"
         else:  # wait
             t["state"] = "todo"
             t.pop("started", None)
             t["note"] = "ждёт решения: " + args.reason
+            # Вопрос с вариантами — для дашборда и для окна, которое спросит человека.
+            t["ask"] = {"question": args.reason, "options": args.option, "at": now()}
             msg = f"{t['id']} ждёт решения человека"
         write(path, data)
         print(msg)
