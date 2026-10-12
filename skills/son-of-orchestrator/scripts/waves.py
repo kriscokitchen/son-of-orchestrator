@@ -181,10 +181,15 @@ def render(root: pathlib.Path, data: dict, plan: dict) -> str:
     return "\n".join(out) + "\n"
 
 
+def waves_word(n: int) -> str:
+    m, k = n % 100, n % 10
+    return f"{n} " + ("волн" if 11 <= m <= 14 else "волна" if k == 1 else "волны" if 2 <= k <= 4 else "волн")
+
+
 def report(plan: dict, every: dict, paused: bool = False) -> None:
     it = plan["iteration"]
     print(f"итерация {it}: {sum(len(w) for w in plan['waves'])} тикетов, "
-          f"{len(plan['waves'])} волн")
+          f"{waves_word(len(plan['waves']))}")
     for n, group in enumerate(plan["waves"], 1):
         cells = []
         for tid in group:

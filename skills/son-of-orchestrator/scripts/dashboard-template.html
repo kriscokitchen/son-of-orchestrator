@@ -593,9 +593,9 @@ document.addEventListener("click", e => {
   if (s) s.parentElement.classList.remove("kept");
 });
 
-// Что делать, зачем, почему так — у тикетов, нарезанных с 2.1. У старых
+// Что считать готовым, зачем, почему так — у тикетов, нарезанных с 2.1. У старых
 // блока нет, и строка остаётся как была.
-const ABOUT = [["what","Что делать"],["why","Зачем"],["how","Почему так"]];
+const ABOUT = [["what","Что считать готовым"],["why","Зачем"],["how","Почему так"]];
 function aboutBlock(t){
   const a = t.about || {};
   const rows = ABOUT.filter(([k]) => a[k]);
@@ -645,9 +645,13 @@ function waveNote(d){
   const at = Date.parse(last.at);
   const when = isNaN(at) ? "" : new Date(at).toLocaleString("ru-RU",
     {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"});
-  const mode = bg.mode === "run"
-    ? "Волны идут сами до конца итерации. Остановка — на ошибке или вопросе."
-    : bg.mode === "ask" ? "Следующая волна — после вашего ответа в основном окне." : "";
+  // Строка режима — только пока есть что запускать: после последней волны
+  // «следующая — после ответа» обещала бы волну, которой не будет.
+  const left = (d.tickets || []).some(t => itOf(t) === CUR && t.state !== "done");
+  const mode = !left ? ""
+    : bg.waiting ? "Следующая волна — после вашего ответа в основном окне."
+    : bg.mode === "run" ? "Волны идут сами до конца итерации. Остановка — на ошибке или вопросе."
+    : bg.mode === "ask" ? "После каждой волны спрашиваю, продолжать ли." : "";
   box.innerHTML = `<div class="wave"><h3>Последняя волна${when ? `<time>${esc(when)}</time>` : ""}</h3>
     <p>${esc(last.text)}</p>${mode ? `<small>${mode}</small>` : ""}</div>`;
 }

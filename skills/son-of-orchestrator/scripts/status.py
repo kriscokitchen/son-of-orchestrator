@@ -15,7 +15,7 @@ status.json ради одной записи: он растёт на тысяч�
     python3 status.py wait T25 "вопрос" --option "А" --option "Б"
                                                ждёт решения человека, обратно в todo
     python3 status.py answer T25 "ответ"       человек ответил: вопрос снят
-    python3 status.py about [T25 …]            блок «что делать, зачем, почему так»
+    python3 status.py about [T25 …]            блок «что считать готовым, зачем, почему так»
                                                из файла тикета; без номеров — вся итерация
     python3 status.py summary "текст"          описание проекта своими словами
     python3 status.py mode ask|run             фоном: спрашивать после волны | вести до конца
@@ -94,14 +94,16 @@ def find(data: dict, tid: str) -> dict:
     sys.exit(f"Тикета {tid} нет в status.json.")
 
 
-ABOUT = (("what", "Что делать"), ("why", "Зачем"), ("how", "Почему так"))
-LABEL = re.compile(r"^\s*(?:[-*]\s+)?\**\s*(Что делать|Зачем|Почему так)\s*\**\s*:\s*\**\s*(.*)$", re.I)
+# «Что делать» — прежнее название первой строки (2.1): такие тикеты тоже читаются.
+ABOUT = (("what", "Что считать готовым"), ("why", "Зачем"), ("how", "Почему так"))
+OLD = {"что делать": "what"}
+LABEL = re.compile(r"^\s*(?:[-*]\s+)?\**\s*(Что считать готовым|Что делать|Зачем|Почему так)\s*\**\s*:\s*\**\s*(.*)$", re.I)
 
 
 def read_about(path: pathlib.Path) -> dict:
     """Три строки из начала файла тикета. Строка может переноситься: продолжение
     идёт до пустой строки, заголовка или следующей метки."""
-    keys = {label.lower(): key for key, label in ABOUT}
+    keys = {**{label.lower(): key for key, label in ABOUT}, **OLD}
     out, cur = {}, None
     for line in path.read_text(encoding="utf-8").splitlines():
         m = LABEL.match(line)
@@ -226,7 +228,12 @@ def main() -> None:
                 bg["last"] = {"iteration": state.current(data), "at": now(), "text": args.text.strip()}
                 # Флаг в файле, а не в памяти окна: контекст основного окна
                 # сжимается, а вопрос после волны должен пережить сжатие.
-                bg["waiting"] = args.stop or bg.get("mode", "ask") != "run"
+                # После последней волны ждать нечего: флаг держал бы «ждём ответа»
+                # над закрытой итерацией.
+                cur = state.current(data)
+                left = any(t.get("state") != "done" for t in data.get("tickets", [])
+                           if state.it_of(t) == cur)
+                bg["waiting"] = left and (args.stop or bg.get("mode", "ask") != "run")
                 msg = "итог волны записан" + (", ждём ответа человека" if bg["waiting"] else "")
             else:
                 bg["waiting"] = False
@@ -249,7 +256,7 @@ def main() -> None:
             write(path, data)
             print(f"блок о тикете записан: {len(ids) - len(missing)} из {len(ids)}")
             if missing:
-                print("без полного блока «Что делать / Зачем / Почему так»: " + ", ".join(missing))
+                print("без полного блока «Что считать готовым / Зачем / Почему так»: " + ", ".join(missing))
             return
 
         t = find(data, args.ticket)
