@@ -213,6 +213,8 @@ def show(root: pathlib.Path, data: dict, tid: str) -> None:
         print(f"проверка проекта: {tools['check']}")
     if tools.get("shots"):
         print(f"снимки: {tools['shots']}")
+    if tools.get("probe"):
+        print(f"проверка поведения: {tools['probe']} <шаги>")
 
 
 def main() -> None:

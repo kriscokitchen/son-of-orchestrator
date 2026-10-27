@@ -89,7 +89,9 @@ def render(root: pathlib.Path, data: dict, plan: dict) -> str:
         add(f"Проверка проекта, которую прогоняет каждый тикет: `{tools['check']}`.")
     if tools.get("shots"):
         add(f"Снимки экранов: `{tools['shots']}`.")
-    if tools.get("check") or tools.get("shots"):
+    if tools.get("probe"):
+        add(f"Проверка поведения: `{tools['probe']} <шаги>`.")
+    if tools.get("check") or tools.get("shots") or tools.get("probe"):
         add("")
 
     r = plan["ready"]
