@@ -282,6 +282,30 @@ def clash(a: dict, b: dict) -> list:
     return overlap(a.get("files"), b.get("files"))
 
 
+LEVELS = ("low", "medium", "high", "xhigh", "max")
+CEILING = "xhigh"  # выше после падения не поднимаем: max — только по слову человека
+
+
+def effort_need(t: dict) -> str | None:
+    """Уровень усилия, на котором тикет должен идти сейчас.
+
+    Каждое падение поднимает его на ступень (`bump` пишет status.py fail), но
+    не выше xhigh. Уровень, назначенный выше потолка, — решение человека, его
+    не трогаем. У тикетов, нарезанных до 2.2, уровня нет — None.
+    """
+    e = t.get("effort") or {}
+    lvl = e.get("level")
+    if lvl not in LEVELS:
+        return None
+    i, top = LEVELS.index(lvl), LEVELS.index(CEILING)
+    return LEVELS[max(i, min(i + int(e.get("bump") or 0), top))]
+
+
+def effort_below(have: str | None, need: str | None) -> bool:
+    """Окно идёт ниже нужного. Неизвестный уровень окна — не «ниже»: проверить нечем."""
+    return have in LEVELS and need in LEVELS and LEVELS.index(have) < LEVELS.index(need)
+
+
 def asking(t: dict) -> bool:
     """Тикет ждёт решения человека: вопрос записан командой wait и ещё не снят."""
     return bool((t.get("ask") or {}).get("question")) and t.get("state") in (None, "todo")
@@ -392,4 +416,7 @@ def snapshot(root: pathlib.Path, data: dict) -> dict:
             "waves": waves(data, it),
             "report": reps.get(it),
         }
-    return {"current": current(data), "iterations": per}
+    # Уровень, нужный тикету сейчас, считается здесь, а не в странице: правило
+    # подъёма после падения живёт в одном месте — effort_need.
+    need = {t["id"]: effort_need(t) for t in data.get("tickets", []) if effort_need(t)}
+    return {"current": current(data), "iterations": per, "effort": need}

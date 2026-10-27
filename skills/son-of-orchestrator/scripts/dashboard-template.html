@@ -272,6 +272,7 @@ ul.rows>li.flash{animation:flash 1.8s var(--e)}
 .meta{display:flex; flex-wrap:wrap; gap:3px 16px; margin-top:7px;
   font-size:12px; color:var(--ink-3); letter-spacing:.01em}
 .meta b{font-weight:500; color:var(--ink-2)}
+.meta .under{color:var(--crimson)}
 ul.fail{list-style:none; margin:8px 0 0; padding:0; display:grid; gap:5px}
 ul.fail li{display:grid; grid-template-columns:auto 1fr; gap:9px; font-size:12.5px;
   line-height:1.45; color:var(--crimson)}
@@ -566,10 +567,15 @@ function since(iso){
 // Сводка под заголовком тикета: сколько приёмки пройдено, сколько он шёл,
 // сколько раз его переделывали и чего он ждёт. Упавшие пункты выписываются
 // словами — точка в полоске говорит, что провал есть, но не говорит, какой.
-function ticketMeta(t, state, minutes){
+// need — уровень усилия, нужный тикету сейчас (state.effort_need, с подъёмом после
+// падения). Тикет шёл ниже нужного — в обход гейта или фоном — это видно багровым.
+function ticketMeta(t, state, minutes, need){
   const ch = t.checks || [];
   const bits = [];
   if (ch.length) bits.push(`приёмка <b>${ch.filter(c=>c.state==="pass").length} из ${ch.length}</b>`);
+  if (need) bits.push(`усилие <b>${need}</b>` + (need !== t.effort.level ? " после падения" : ""));
+  if (need && t.effort.override && t.state !== "todo")
+    bits.push(`<span class="under" title="${esc(t.effort.override)}">шёл на ${esc(t.effort.ran || "?")}</span>`);
   if (t.state === "done" && minutes != null) bits.push(dur(minutes));
   if (t.state === "doing" && t.started)
     bits.push(`<span data-since="${esc(t.started)}">идёт ${dur(since(t.started))}</span>`);
@@ -618,7 +624,7 @@ function askBlock(t){
     <small>Ответить в основном окне: там этот вопрос задан с вариантами и свободным ответом.</small></div>`;
 }
 
-function ticketRow(t, i, state, minutes, moved){
+function ticketRow(t, i, state, minutes, moved, need){
   const ask = asking(t);
   const chip = ask ? "ask" : t.state;
   return `
@@ -629,7 +635,7 @@ function ticketRow(t, i, state, minutes, moved){
         ${t.note && !ask ? `<small>${esc(t.note)}</small>` : ""}
         ${aboutBlock(t)}
         ${askBlock(t)}
-        ${ticketMeta(t, state, minutes)}
+        ${ticketMeta(t, state, minutes, need)}
         <div class="pips">${(t.checks||[]).map(c=>`<span class="pip" data-p="${esc(c.state)}" title="${esc(c.text)}"></span>`).join("")}</div>
       </div>
       <span class="chip" data-s="${esc(chip)}">${ask ? "ждёт решения" : TSTATE[t.state]||esc(t.state)}</span>
@@ -850,7 +856,7 @@ function paint(payload, live){
       // Строка, сменившая состояние с прошлого опроса, подсвечивается один раз:
       // человек возвращается во вкладку и видит, что именно сдвинулось.
       const moved = prevTickets && prevTickets[t.id] && prevTickets[t.id] !== t.state;
-      rows.push(ticketRow(t, i++, tState, m.minutes[t.id], moved));
+      rows.push(ticketRow(t, i++, tState, m.minutes[t.id], moved, (snap.effort || {})[t.id]));
     });
   });
   document.getElementById("tickets").innerHTML = ts.length ? rows.join("")

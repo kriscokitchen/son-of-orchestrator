@@ -35,6 +35,12 @@ def here() -> str:
         return str(p)
 
 
+def effort_tag(t: dict) -> str:
+    """«   усилие xhigh» — у тикетов, нарезанных с 2.2; у старых пусто."""
+    need = state.effort_need(t)
+    return f"   усилие {need}" if need else ""
+
+
 def files_phrase(files: list) -> str:
     shown = ", ".join(f"`{f}`" for f in files[:2])
     return shown + (f" и ещё {len(files) - 2}" if len(files) > 2 else "")
@@ -72,6 +78,12 @@ def render(root: pathlib.Path, data: dict, plan: dict) -> str:
     add("Каждый тикет — в отдельном окне агента, в корне проекта: вставить строку "
         "запуска. Первым делом окно смотрит свой тикет через `status.py show` и `git log`.")
     add("")
+    if any(state.effort_need(t) for t in every.values() if state.it_of(t) == it):
+        add("У тикета указано усилие — уровень, на котором окно должно работать. Окно ниже "
+            "нужного тикет не начнёт и скажет, как поднять. Поднимать только для окна: "
+            "`/effort` → уровень → клавиша `s`; набранное текстом `/effort xhigh` "
+            "сохранится по умолчанию для всех окон.")
+        add("")
     if tools.get("check"):
         add(f"Проверка проекта, которую прогоняет каждый тикет: `{tools['check']}`.")
     if tools.get("shots"):
@@ -85,7 +97,7 @@ def render(root: pathlib.Path, data: dict, plan: dict) -> str:
     if r["now"]:
         add("```")
         for tid in r["now"]:
-            add(f"{tid}  {every[tid].get('title', '')}")
+            add(f"{tid}  {every[tid].get('title', '')}{effort_tag(every[tid])}")
             add(f"     /son-of-orchestrator {tid}")
             add("")
         out[-1] = "```"
@@ -132,7 +144,7 @@ def render(root: pathlib.Path, data: dict, plan: dict) -> str:
             mark = MARK.get(t.get("state"))
             ds = plan["deps"][tid]
             after = f"   (после {', '.join(ds)})" if ds else ""
-            add(f"{tid}  {t.get('title', '')}{after}" + (f"   — {mark}" if mark else ""))
+            add(f"{tid}  {t.get('title', '')}{after}{effort_tag(t)}" + (f"   — {mark}" if mark else ""))
             add(f"     /son-of-orchestrator {tid}")
             add("")
         out[-1] = "```"
@@ -197,7 +209,9 @@ def report(plan: dict, every: dict, paused: bool = False) -> None:
             cells.append(f"{tid}{mark}")
         print(f"  волна {n}: {'  '.join(cells)}")
     r = plan["ready"]
-    print("  можно сейчас: " + (", ".join(r["now"]) or "ничего"))
+    print("  можно сейчас: " + (", ".join(
+        tid + (f" ({state.effort_need(every[tid])})" if state.effort_need(every[tid]) else "")
+        for tid in r["now"]) or "ничего"))
     for h in r["held"]:
         why = "нет списка файлов" if h.get("unknown") else "общие файлы " + ", ".join(h["files"])
         print(f"  {h['ticket']} ждёт {h['by']}: {why}")
