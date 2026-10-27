@@ -28,7 +28,9 @@ status.json ради одной записи: он растёт на тысяч�
     python3 status.py mode ask|run             фоном: спрашивать после волны | вести до конца
     python3 status.py wave "итог" [--stop]     итог волны; в режиме ask — ждать ответа
     python3 status.py go                       человек ответил на итог волны: можно дальше
-    python3 status.py phase 4                  фаза текущей итерации
+    python3 status.py phase 4                  фаза текущей итерации; Фазы 3 и 6 (дизайн)
+                                               откажут, если окно ниже high
+        --effort-ok "причина"                  начать дизайн-фазу ниже high: выше не пускает модель
 
 Путь к проекту — текущая папка или --root.
 """
@@ -169,9 +171,17 @@ def show(root: pathlib.Path, data: dict, tid: str) -> None:
     if need:
         print(f"усилие: {e['level']}" + (f" — {e['why']}" if e.get("why") else ""))
         if need != e["level"]:
-            why = ("поднят после падения" if need == state.effort_need(t)
-                   else "не ниже уровня, на котором работает человек")
-            print(f"сейчас нужно: {need} — {why}")
+            at = state.LEVELS.index
+            plain = state.effort_need({**t, "design": False})  # уровень и подъём после падений
+            floor = state.effort_floor(data)
+            why = []
+            if plain != e["level"]:
+                why.append("поднят после падения")
+            if floor and at(floor) > at(plain):
+                why.append("не ниже уровня, на котором работает человек")
+            if t.get("design") and at(state.DESIGN) > max(at(plain), at(floor) if floor else -1):
+                why.append(f"дизайн — не ниже {state.DESIGN}")
+            print(f"сейчас нужно: {need} — {', '.join(why)}")
         have = window_effort()
         if state.effort_below(have, need):
             print(f"УСИЛИЕ НИЖЕ НУЖНОГО: это окно на {have}, тикет просит {need}. "
@@ -254,6 +264,8 @@ def main() -> None:
     sub.add_parser("floor")
     ph = sub.add_parser("phase")
     ph.add_argument("n", type=int)
+    ph.add_argument("--effort-ok", metavar="ПРИЧИНА",
+                    help="начать дизайн-фазу ниже high: выше не пускает модель или лимит")
     args = ap.parse_args()
 
     root = pathlib.Path(args.root).resolve()
@@ -269,6 +281,18 @@ def main() -> None:
             if not 0 <= args.n < len(state.PHASES):
                 sys.exit(f"Фазы {args.n} нет: 0–{len(state.PHASES) - 1}.")
             data["phase"] = {"current": args.n, "name": state.PHASES[args.n], "started": now()}
+            if args.n in state.DESIGN_PHASES:
+                # Направление и финишная проработка решают, как будет выглядеть
+                # продукт, — на низком уровне их делают по первой пришедшей идее.
+                have = window_effort()
+                if state.effort_below(have, state.DESIGN):
+                    if not args.effort_ok:
+                        sys.exit(f"Фаза {args.n} ({state.PHASES[args.n]}) не начата: дизайн идёт не ниже "
+                                 f"{state.DESIGN}, а это окно на {have}. " + raise_hint(state.DESIGN)
+                                 + f"Потом повтори. Выше не пускает модель или ограничение — "
+                                 f"status.py phase {args.n} --effort-ok \"причина\".")
+                    data["phase"]["override"] = args.effort_ok
+                data["phase"]["effort"] = have
             write(path, data)
             print(f"фаза {args.n}: {state.PHASES[args.n]}")
             return

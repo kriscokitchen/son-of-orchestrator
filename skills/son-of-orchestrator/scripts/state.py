@@ -284,6 +284,8 @@ def clash(a: dict, b: dict) -> list:
 
 LEVELS = ("low", "medium", "high", "xhigh", "max")
 CEILING = "xhigh"  # выше после падения не поднимаем: max — только по слову человека
+DESIGN = "high"  # дизайн — направление, тикеты с интерфейсом, финиш — не ниже этого
+DESIGN_PHASES = (3, 6)  # Фаза 3 — направление, Фаза 6 — финишная проработка
 
 
 def effort_floor(data: dict) -> str | None:
@@ -302,8 +304,8 @@ def effort_need(t: dict, floor: str | None = None) -> str | None:
 
     Каждое падение поднимает его на ступень (`bump` пишет status.py fail), но
     не выше xhigh. Уровень, назначенный выше потолка, — решение человека, его
-    не трогаем. Ниже пола (effort_floor) не опускается. У тикетов, нарезанных
-    до 2.2, уровня нет — None.
+    не трогаем. Ниже пола (effort_floor) не опускается, тикет с интерфейсом
+    (`design: true`) — ниже high. У тикетов, нарезанных до 2.2, уровня нет — None.
     """
     e = t.get("effort") or {}
     lvl = e.get("level")
@@ -313,6 +315,8 @@ def effort_need(t: dict, floor: str | None = None) -> str | None:
     need = max(i, min(i + int(e.get("bump") or 0), top))
     if floor in LEVELS:
         need = max(need, LEVELS.index(floor))
+    if t.get("design"):
+        need = max(need, LEVELS.index(DESIGN))
     return LEVELS[need]
 
 
