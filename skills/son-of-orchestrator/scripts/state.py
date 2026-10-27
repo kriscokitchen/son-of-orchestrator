@@ -286,19 +286,34 @@ LEVELS = ("low", "medium", "high", "xhigh", "max")
 CEILING = "xhigh"  # выше после падения не поднимаем: max — только по слову человека
 
 
-def effort_need(t: dict) -> str | None:
+def effort_floor(data: dict) -> str | None:
+    """Уровень, на котором работает человек (status.py floor на Фазе 4). Ниже него
+    тикет не опускается: правила нарезки поднимают уровень, а не снижают выбор
+    человека. Выше xhigh не держим — max в сессии живёт до её конца и в пол
+    всех тикетов не годится."""
+    f = data.get("effort_floor")
+    if f not in LEVELS:
+        return None
+    return LEVELS[min(LEVELS.index(f), LEVELS.index(CEILING))]
+
+
+def effort_need(t: dict, floor: str | None = None) -> str | None:
     """Уровень усилия, на котором тикет должен идти сейчас.
 
     Каждое падение поднимает его на ступень (`bump` пишет status.py fail), но
     не выше xhigh. Уровень, назначенный выше потолка, — решение человека, его
-    не трогаем. У тикетов, нарезанных до 2.2, уровня нет — None.
+    не трогаем. Ниже пола (effort_floor) не опускается. У тикетов, нарезанных
+    до 2.2, уровня нет — None.
     """
     e = t.get("effort") or {}
     lvl = e.get("level")
     if lvl not in LEVELS:
         return None
     i, top = LEVELS.index(lvl), LEVELS.index(CEILING)
-    return LEVELS[max(i, min(i + int(e.get("bump") or 0), top))]
+    need = max(i, min(i + int(e.get("bump") or 0), top))
+    if floor in LEVELS:
+        need = max(need, LEVELS.index(floor))
+    return LEVELS[need]
 
 
 def effort_below(have: str | None, need: str | None) -> bool:
@@ -418,5 +433,6 @@ def snapshot(root: pathlib.Path, data: dict) -> dict:
         }
     # Уровень, нужный тикету сейчас, считается здесь, а не в странице: правило
     # подъёма после падения живёт в одном месте — effort_need.
-    need = {t["id"]: effort_need(t) for t in data.get("tickets", []) if effort_need(t)}
+    floor = effort_floor(data)
+    need = {t["id"]: effort_need(t, floor) for t in data.get("tickets", []) if effort_need(t)}
     return {"current": current(data), "iterations": per, "effort": need}

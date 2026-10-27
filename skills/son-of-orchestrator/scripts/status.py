@@ -13,6 +13,8 @@ status.json ради одной записи: он растёт на тысяч�
         --effort-ok "причина"                  стартовать ниже: выше не пускает модель или лимит
         --agent                                тикет ушёл фоновому агенту с effort из show
     python3 status.py ran T25 medium           на каком усилии шёл фоновый агент — из его отчёта
+    python3 status.py floor                    нижняя ступень усилия — уровень этого окна,
+                                               то есть тот, на котором работает человек
     python3 status.py check T25 3 pass         пункт приёмки 3: pass | fail | pending
     python3 status.py done T25 --commit abc123 закрыть; откажет, если не все пункты pass
     python3 status.py fail T25 "причина"       упал, причина одной строкой
@@ -163,11 +165,13 @@ def show(root: pathlib.Path, data: dict, tid: str) -> None:
     for key, label in ABOUT:
         if about.get(key):
             print(f"{label.lower()}: {about[key]}")
-    e, need = t.get("effort") or {}, state.effort_need(t)
+    e, need = t.get("effort") or {}, state.effort_need(t, state.effort_floor(data))
     if need:
         print(f"усилие: {e['level']}" + (f" — {e['why']}" if e.get("why") else ""))
         if need != e["level"]:
-            print(f"сейчас нужно: {need} — поднят после падения")
+            why = ("поднят после падения" if need == state.effort_need(t)
+                   else "не ниже уровня, на котором работает человек")
+            print(f"сейчас нужно: {need} — {why}")
         have = window_effort()
         if state.effort_below(have, need):
             print(f"УСИЛИЕ НИЖЕ НУЖНОГО: это окно на {have}, тикет просит {need}. "
@@ -245,6 +249,7 @@ def main() -> None:
     w.add_argument("text")
     w.add_argument("--stop", action="store_true", help="остановиться и ждать ответа и в режиме run")
     sub.add_parser("go")
+    sub.add_parser("floor")
     ph = sub.add_parser("phase")
     ph.add_argument("n", type=int)
     args = ap.parse_args()
@@ -269,6 +274,17 @@ def main() -> None:
             data["summary"] = args.text.strip()
             write(path, data)
             print("описание проекта записано")
+            return
+        if args.cmd == "floor":
+            have = window_effort()
+            if have is None:
+                sys.exit("Уровень этого окна неизвестен (переменной CLAUDE_EFFORT нет): "
+                         "нижняя ступень не записана, тикеты пойдут по правилам нарезки.")
+            data["effort_floor"] = have
+            write(path, data)
+            got = state.effort_floor(data)
+            print(f"нижняя ступень усилия: {got}" + (f" (окно на {have}, выше xhigh пол не держим)"
+                                                      if got != have else ""))
             return
         if args.cmd in ("mode", "wave", "go"):
             bg = data.setdefault("background", {})
@@ -338,7 +354,7 @@ def main() -> None:
         if args.cmd in ("start", "done", "fail"):
             t.pop("ask", None)  # вопрос снят: тикет пошёл дальше
         if args.cmd == "start":
-            need, e = state.effort_need(t), t.get("effort")
+            need, e = state.effort_need(t, state.effort_floor(data)), t.get("effort")
             have = None if args.agent else window_effort()
             if not args.agent and not args.effort_ok and state.effort_below(have, need):
                 # Гейт: тикет, нарезанный под xhigh, на medium проверит меньше краёв
@@ -364,7 +380,7 @@ def main() -> None:
             t["attempts"] = int(t.get("attempts") or 0) + 1
             msg = f"{t['id']} в работе, попытка {t['attempts']}"
         elif args.cmd == "ran":
-            need, e = state.effort_need(t), t.get("effort")
+            need, e = state.effort_need(t, state.effort_floor(data)), t.get("effort")
             if e is None:
                 sys.exit(f"У {t['id']} нет уровня усилия: записывать не к чему.")
             e["ran"] = args.level
@@ -400,7 +416,7 @@ def main() -> None:
                 t["effort"]["bump"] = int(t["effort"].get("bump") or 0) + 1
             msg = f"{t['id']} упал: {args.reason}"
             if state.effort_need(t):
-                msg += f"; следующая попытка — на усилии {state.effort_need(t)}"
+                msg += f"; следующая попытка — на усилии {state.effort_need(t, state.effort_floor(data))}"
         elif args.cmd == "answer":
             t.pop("ask", None)
             t["note"] = "решение: " + args.reason

@@ -35,9 +35,9 @@ def here() -> str:
         return str(p)
 
 
-def effort_tag(t: dict) -> str:
+def effort_tag(t: dict, floor: str | None) -> str:
     """«   усилие xhigh» — у тикетов, нарезанных с 2.2; у старых пусто."""
-    need = state.effort_need(t)
+    need = state.effort_need(t, floor)
     return f"   усилие {need}" if need else ""
 
 
@@ -51,6 +51,7 @@ def render(root: pathlib.Path, data: dict, plan: dict) -> str:
     every = {t["id"]: t for t in data.get("tickets", [])}
     title = state.titles(root, data).get(it)
     tools = data.get("tools") or {}
+    floor = state.effort_floor(data)
     out = []
     add = out.append
 
@@ -97,7 +98,7 @@ def render(root: pathlib.Path, data: dict, plan: dict) -> str:
     if r["now"]:
         add("```")
         for tid in r["now"]:
-            add(f"{tid}  {every[tid].get('title', '')}{effort_tag(every[tid])}")
+            add(f"{tid}  {every[tid].get('title', '')}{effort_tag(every[tid], floor)}")
             add(f"     /son-of-orchestrator {tid}")
             add("")
         out[-1] = "```"
@@ -144,7 +145,7 @@ def render(root: pathlib.Path, data: dict, plan: dict) -> str:
             mark = MARK.get(t.get("state"))
             ds = plan["deps"][tid]
             after = f"   (после {', '.join(ds)})" if ds else ""
-            add(f"{tid}  {t.get('title', '')}{after}{effort_tag(t)}" + (f"   — {mark}" if mark else ""))
+            add(f"{tid}  {t.get('title', '')}{after}{effort_tag(t, floor)}" + (f"   — {mark}" if mark else ""))
             add(f"     /son-of-orchestrator {tid}")
             add("")
         out[-1] = "```"
@@ -198,7 +199,7 @@ def waves_word(n: int) -> str:
     return f"{n} " + ("волн" if 11 <= m <= 14 else "волна" if k == 1 else "волны" if 2 <= k <= 4 else "волн")
 
 
-def report(plan: dict, every: dict, paused: bool = False) -> None:
+def report(plan: dict, every: dict, paused: bool = False, floor: str | None = None) -> None:
     it = plan["iteration"]
     print(f"итерация {it}: {sum(len(w) for w in plan['waves'])} тикетов, "
           f"{waves_word(len(plan['waves']))}")
@@ -210,8 +211,11 @@ def report(plan: dict, every: dict, paused: bool = False) -> None:
         print(f"  волна {n}: {'  '.join(cells)}")
     r = plan["ready"]
     print("  можно сейчас: " + (", ".join(
-        tid + (f" ({state.effort_need(every[tid])})" if state.effort_need(every[tid]) else "")
+        tid + (f" ({state.effort_need(every[tid], floor)})" if state.effort_need(every[tid]) else "")
         for tid in r["now"]) or "ничего"))
+    if not floor and any(state.effort_need(t) for t in every.values() if state.it_of(t) == it):
+        print("  НИЖНЯЯ СТУПЕНЬ НЕ ЗАПИСАНА: тикеты пойдут по правилам нарезки, даже ниже уровня, "
+              "на котором работает человек. В основном окне — status.py floor")
     for h in r["held"]:
         why = "нет списка файлов" if h.get("unknown") else "общие файлы " + ", ".join(h["files"])
         print(f"  {h['ticket']} ждёт {h['by']}: {why}")
@@ -249,7 +253,7 @@ def main() -> None:
     if not plan["waves"]:
         sys.exit(f"В итерации {plan['iteration']} нет тикетов.")
 
-    report(plan, every, bool((data.get("background") or {}).get("waiting")))
+    report(plan, every, bool((data.get("background") or {}).get("waiting")), state.effort_floor(data))
     if not args.dry:
         out = pathlib.Path(args.out) if args.out else state.orch(root) / "runbook.md"
         out.write_text(render(root, data, plan), encoding="utf-8")

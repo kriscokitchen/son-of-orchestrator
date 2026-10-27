@@ -567,13 +567,15 @@ function since(iso){
 // Сводка под заголовком тикета: сколько приёмки пройдено, сколько он шёл,
 // сколько раз его переделывали и чего он ждёт. Упавшие пункты выписываются
 // словами — точка в полоске говорит, что провал есть, но не говорит, какой.
-// need — уровень усилия, нужный тикету сейчас (state.effort_need, с подъёмом после
-// падения). Тикет шёл ниже нужного — в обход гейта или фоном — это видно багровым.
+// need — уровень усилия, нужный тикету сейчас (state.effort_need: с подъёмом после
+// падения и не ниже уровня, на котором работает человек). Подпись «после падения» —
+// только когда подъём был: пол поднимает уровень молча, он один на все тикеты.
+// Тикет шёл ниже нужного — в обход гейта или фоном — это видно багровым.
 function ticketMeta(t, state, minutes, need){
   const ch = t.checks || [];
   const bits = [];
   if (ch.length) bits.push(`приёмка <b>${ch.filter(c=>c.state==="pass").length} из ${ch.length}</b>`);
-  if (need) bits.push(`усилие <b>${need}</b>` + (need !== t.effort.level ? " после падения" : ""));
+  if (need) bits.push(`усилие <b>${need}</b>` + (need !== t.effort.level && t.effort.bump > 0 ? " после падения" : ""));
   if (need && t.effort.override && t.state !== "todo")
     bits.push(`<span class="under" title="${esc(t.effort.override)}">шёл на ${esc(t.effort.ran || "?")}</span>`);
   if (t.state === "done" && minutes != null) bits.push(dur(minutes));
