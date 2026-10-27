@@ -80,9 +80,10 @@
 
 После сборки — один раз:
 
-- `node <путь к impeccable>/scripts/detect.mjs --json <свои файлы>` — механические
-  находки (`<путь к impeccable>` — обычно `~/.claude/skills/impeccable`); чини
-  то, что в пределах тикета;
+- команда `impeccable` `detect --json <свои файлы>` — механические находки
+  (`<путь к impeccable>/scripts/impeccable detect …`, в версиях до 4.8 —
+  `node <путь к impeccable>/scripts/detect.mjs …`; путь обычно
+  `~/.claude/skills/impeccable`); чини то, что в пределах тикета;
 - снимки `tools.shots`, при эталоне — с `--compare`, и смотри на склейку, а не
   на снимок отдельно;
 - предупреждения `shots.mjs`: тяжёлую картинку сожми; контраст ниже нормы чини,

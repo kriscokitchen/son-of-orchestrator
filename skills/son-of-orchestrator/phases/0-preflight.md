@@ -13,10 +13,19 @@
 `impeccable` в `~/.claude/skills/` или в `.claude/skills/` проекта.
 
 Нужна четвёртая версия: Фаза 3 опирается на его выбор направления в браузере, а
-финиш — на тексты ревьюера и документатора. Признак — в каталоге есть
-`scripts/serve-question.mjs` и `reference/degraded/finish-reviewer.md`. Нет —
-это старый `impeccable`: скажи человеку одной строкой и предложи обновить той же
+финиш — на ревьюера и документатора. Признак — в каталоге есть
+`reference/degraded/finish-reviewer.md` и команды `impeccable`: с 4.8 это один
+файл `scripts/impeccable` (`scripts/impeccable serve-question …`), в 4.0–4.7 —
+отдельные `scripts/serve-question.mjs` и соседние. Ниже в фазах «команда
+`impeccable` X» значит `<путь к impeccable>/scripts/impeccable X`, а если такого
+файла нет — `node <путь к impeccable>/scripts/X.mjs`. Ни того ни другого — это
+старый `impeccable`: скажи человеку одной строкой и предложи обновить той же
 командой установки, что ниже.
+
+Обновление `impeccable` (`npx impeccable update`) ставит ещё агентов в
+`~/.claude/agents` и хуки в `~/.claude/settings.json` — детектор после каждой
+правки файлов во всех проектах. Если человек обновлял при тебе, скажи ему об
+этом одной строкой: хуки срабатывают и вне навыка.
 
 **`design-taste-frontend`** (taste-skill) — не зависимость. Есть — окна тикетов
 лендинга и портфолио берут из него правила ремесла (какие — в
